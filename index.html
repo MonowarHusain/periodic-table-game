@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AtomExplorer 🧪 - Kids Interactive Periodic Table & Lab</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Fredoka', 'Outfit', 'sans-serif'],
+                    },
+                    colors: {
+                        alkali: '#FF6B6B',
+                        alkaline: '#FF9F43',
+                        transition: '#FECA57',
+                        postTransition: '#48DBFB',
+                        metalloid: '#1DD1A1',
+                        nonmetal: '#10AC84',
+                        halogen: '#54A0FF',
+                        noble: '#5F27CD',
+                        lanthanide: '#FF9FF3',
+                        actinide: '#F368E0',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Custom CSS Animations & Helpers -->
+    <style>
+        body {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        /* Custom scrollbar for element containers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 10px;
+        }
+
+        /* Periodic Table Grid Layout */
+        .pt-grid {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(38px, 1fr));
+            gap: 4px;
+        }
+
+        @media (max-width: 1024px) {
+            .pt-grid {
+                grid-template-columns: repeat(18, minmax(32px, 1fr));
+                gap: 2px;
+            }
+        }
+
+        /* Keyframes for beaker bubbles */
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.8); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translateY(-80px) scale(1.2); opacity: 0; }
+        }
+
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: floatUp 2.5s infinite ease-in;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.6)); }
+            50% { filter: drop-shadow(0 0 18px rgba(147, 51, 234, 0.9)); }
+        }
+
+        .reacting-beaker {
+            animation: pulseGlow 1s infinite alternate;
+        }
+
+        /* Tile hover lift */
+        .element-tile {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .element-tile:hover {
+            transform: translateY(-3px) scale(1.08);
+            z-index: 20;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Navigation Header -->
+    <header class="bg-white/80 dark:bg-slate-800/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 dark:border-slate-700 shadow-sm transition-colors">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            
+            <!-- Logo & Title -->
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('table')">
+                <div class="w-11 h-11 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl shadow-md shadow-indigo-500/30 transform hover:rotate-6 transition-transform">
+                    🧪
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-wide bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        AtomExplorer
+                    </h1>
+                    <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">5th Grade Science Lab</p>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs -->
+            <nav class="flex items-center gap-2 bg-slate-200/70 dark:bg-slate-700/70 p-1.5 rounded-2xl text-sm font-semibold">
+                <button id="tab-table-btn" onclick="switchTab('table')" class="px-4 py-2 rounded-xl transition-all shadow-sm bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                    🗺️ <span class="hidden sm:inline">Periodic</span> Table
+                </button>
+                <button id="tab-lab-btn" onclick="switchTab('lab')" class="px-4 py-2 rounded-xl transition-all text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2">
+                    ⚗️ Reaction Lab <span id="lab-badge" class="ml-1 bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">New</span>
+                </button>
+                <button id="tab-journal-btn" onclick="switchTab('journal')" class="px-4 py-2 rounded-xl transition-all text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2">
+                    📖 Discovery Journal (<span id="journal-count">0/15</span>)
+                </button>
+            </nav>
+
+            <!-- Mode & Sound Controls -->
+            <div class="flex items-center gap-2">
+                <button id="sound-btn" onclick="toggleSound()" class="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" title="Toggle Sound Effects">
+                    🔊
+                </button>
+                <button id="theme-btn" onclick="toggleTheme()" class="p-2.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors" title="Toggle Light/Dark Mode">
+                    🌙
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Containers -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 md:p-6 flex flex-col gap-6">
+
+        <!-- ================= TAB 1: PERIODIC TABLE VIEW ================= -->
+        <section id="view-table" class="flex flex-col gap-5">
+            
+            <!-- Search, Filter & Legend Toolbar -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-4">
+                
+                <!-- Search Box -->
+                <div class="relative flex-1 min-w-[220px]">
+                    <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400">🔍</span>
+                    <input type="text" id="search-input" oninput="handleFilterChange()" placeholder="Search name, symbol (e.g., Gold, Fe, 8)..." 
+                        class="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+
+                <!-- Category Dropdown -->
+                <div class="flex items-center gap-2">
+                    <label for="category-filter" class="text-xs font-bold uppercase text-slate-500 dark:text-slate-400">Group:</label>
+                    <select id="category-filter" onchange="handleFilterChange()" class="py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">All Groups</option>
+                        <option value="alkali">Alkali Metals 💥</option>
+                        <option value="alkaline">Alkaline Earth Metals ✨</option>
+                        <option value="transition">Transition Metals 🔨</option>
+                        <option value="post-transition">Basic Metals 🪙</option>
+                        <option value="metalloid">Metalloids (Semimetals) 💻</option>
+                        <option value="reactive-nonmetal">Reactive Nonmetals 🍃</option>
+                        <option value="halogen">Halogens 🧂</option>
+                        <option value="noble">Noble Gases 🎈</option>
+                        <option value="lanthanide">Lanthanides 🌟</option>
+                        <option value="actinide">Actinides ☢️</option>
+                    </select>
+                </div>
+
+                <!-- State Filter -->
+                <div class="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl text-xs font-semibold">
+                    <button onclick="filterState('all')" class="state-btn active px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 shadow-xs">All</button>
+                    <button onclick="filterState('solid')" class="state-btn px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400">🧊 Solid</button>
+                    <button onclick="filterState('liquid')" class="state-btn px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400">💧 Liquid</button>
+                    <button onclick="filterState('gas')" class="state-btn px-2.5 py-1 rounded-lg text-slate-600 dark:text-slate-400">💨 Gas</button>
+                </div>
+            </div>
+
+            <!-- Interactive Periodic Table Grid Wrapper -->
+            <div class="bg-white dark:bg-slate-800 p-3 sm:p-5 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-x-auto">
+                <div class="min-w-[760px]">
+                    <!-- Main Periodic Grid (Rows 1 to 7) -->
+                    <div id="pt-main-grid" class="pt-grid mb-4"></div>
+
+                    <!-- Separator / Spacing for Lanthanides & Actinides -->
+                    <div class="flex items-center justify-between my-2 px-2 text-xs font-bold text-slate-400 uppercase tracking-widest border-t border-dashed border-slate-200 dark:border-slate-700 pt-3">
+                        <span>Lanthanides & Actinides Series</span>
+                        <span>Inner Transition Elements</span>
+                    </div>
+
+                    <!-- Inner Transition Grid -->
+                    <div id="pt-f-block-grid" class="pt-grid"></div>
+                </div>
+            </div>
+
+            <!-- Color Category Legend -->
+            <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap gap-2 justify-center text-xs font-semibold">
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300">
+                    <span class="w-3 h-3 rounded-full bg-red-500"></span> Alkali Metals
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">
+                    <span class="w-3 h-3 rounded-full bg-orange-500"></span> Alkaline Earth
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-yellow-100 dark:bg-yellow-950/50 text-yellow-800 dark:text-yellow-300">
+                    <span class="w-3 h-3 rounded-full bg-amber-400"></span> Transition Metals
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-100 dark:bg-cyan-950/50 text-cyan-800 dark:text-cyan-300">
+                    <span class="w-3 h-3 rounded-full bg-sky-400"></span> Basic Metals
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300">
+                    <span class="w-3 h-3 rounded-full bg-emerald-500"></span> Metalloids
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-green-100 dark:bg-green-950/50 text-green-800 dark:text-green-300">
+                    <span class="w-3 h-3 rounded-full bg-green-600"></span> Nonmetals
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-100 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300">
+                    <span class="w-3 h-3 rounded-full bg-blue-500"></span> Halogens
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300">
+                    <span class="w-3 h-3 rounded-full bg-purple-600"></span> Noble Gases
+                </div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-pink-100 dark:bg-pink-950/50 text-pink-800 dark:text-pink-300">
+                    <span class="w-3 h-3 rounded-full bg-pink-400"></span> Rare Earth Elements
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 2: REACTION CRAFTING LAB ================= -->
+        <section id="view-lab" class="hidden flex-col gap-6">
+            
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-3xl shadow-md flex flex-col md:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold flex items-center gap-2">
+                        ⚗️ Atom Crafting Lab
+                    </h2>
+                    <p class="text-blue-100 text-sm mt-1 max-w-xl">
+                        Add elements to the reaction beaker and press <strong>"Mix & React!"</strong> to see if they form a compound or molecule!
+                    </p>
+                </div>
+                <button onclick="clearBeaker()" class="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-white font-bold backdrop-blur-md transition-colors text-sm flex items-center gap-1">
+                    🧹 Clear Beaker
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                <!-- Quick Inventory Sidebar / Element Picker -->
+                <div class="lg:col-span-5 bg-white dark:bg-slate-800 p-5 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col gap-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-base flex items-center gap-2">
+                            🎒 Common Lab Elements
+                        </h3>
+                        <span class="text-xs text-slate-400">Click to add to beaker</span>
+                    </div>
+
+                    <!-- Quick Elements Grid -->
+                    <div id="quick-elements-grid" class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[380px] overflow-y-auto p-1">
+                        <!-- JS populated with reactive elements -->
+                    </div>
+
+                    <!-- Quick Hint Box -->
+                    <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 p-3 rounded-2xl text-xs text-amber-800 dark:text-amber-300 flex items-start gap-2">
+                        <span class="text-base">💡</span>
+                        <p><strong>Science Hint:</strong> Try mixing 2 Hydrogen (H) + 1 Oxygen (O) to make Water, or 1 Sodium (Na) + 1 Chlorine (Cl) for Salt!</p>
+                    </div>
+                </div>
+
+                <!-- Interactive Reaction Flask & Workspace -->
+                <div class="lg:col-span-7 bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-between relative overflow-hidden min-h-[420px]">
+                    
+                    <!-- Background Particle Canvas for Reactions -->
+                    <canvas id="reaction-canvas" class="absolute inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+                    <div class="w-full text-center z-10">
+                        <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Reaction Flask Content</span>
+                    </div>
+
+                    <!-- The Graphical Beaker -->
+                    <div id="beaker-container" class="relative my-6 flex flex-col items-center justify-end w-48 h-56 z-10">
+                        <!-- Glass Beaker Outline SVG -->
+                        <svg class="w-full h-full drop-shadow-xl" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Beaker Rim -->
+                            <path d="M 20 10 L 80 10 L 80 15 L 20 15 Z" fill="currentColor" class="text-slate-300 dark:text-slate-600" />
+                            <!-- Beaker Body Glass -->
+                            <path d="M 25 15 L 25 100 Q 25 110 35 110 L 65 110 Q 75 110 75 100 L 75 15" stroke="currentColor" stroke-width="4" class="text-slate-400 dark:text-slate-500" fill="rgba(255,255,255,0.05)" />
+                            <!-- Liquid Level inside beaker -->
+                            <path id="beaker-liquid" d="M 27 60 L 73 60 Q 73 108 65 108 L 35 108 Q 27 108 27 60 Z" fill="url(#liquid-gradient)" class="opacity-80 transition-all duration-500" />
+                            <defs>
+                                <linearGradient id="liquid-gradient" x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stop-color="#60A5FA" />
+                                    <stop offset="100%" stop-color="#3B82F6" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
+
+                        <!-- Bubbles overlay inside liquid -->
+                        <div id="bubbles-box" class="absolute inset-x-8 bottom-4 top-20 overflow-hidden pointer-events-none"></div>
+
+                        <!-- Floating Selected Element Badges inside beaker -->
+                        <div id="beaker-elements" class="absolute inset-x-0 bottom-6 flex flex-wrap items-center justify-center gap-1.5 p-2 z-20">
+                            <span id="empty-beaker-text" class="text-xs font-semibold text-slate-400 bg-white/80 dark:bg-slate-800/80 px-2 py-1 rounded-lg">Beaker is Empty</span>
+                        </div>
+                    </div>
+
+                    <!-- Action Reaction Buttons -->
+                    <div class="flex items-center gap-4 w-full max-w-xs z-10">
+                        <button id="react-btn" onclick="triggerReaction()" class="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold shadow-lg shadow-teal-500/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                            💥 Mix & React!
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= TAB 3: DISCOVERY JOURNAL ================= -->
+        <section id="view-journal" class="hidden flex-col gap-6">
+            <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-extrabold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+                        📖 Lab Discovery Journal
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        Collect molecules by experimenting in the Reaction Lab! Can you unlock all 15?
+                    </p>
+                </div>
+                <div class="bg-indigo-50 dark:bg-indigo-950/50 px-4 py-2 rounded-2xl border border-indigo-200 dark:border-indigo-800 text-center">
+                    <span class="text-xs font-bold text-indigo-500 uppercase block">Progress</span>
+                    <span id="journal-progress-text" class="text-xl font-black text-indigo-600 dark:text-indigo-300">0 / 15 Unlocked</span>
+                </div>
+            </div>
+
+            <!-- Journal Grid -->
+            <div id="journal-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- JS Populated Molecule Cards -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- ================= ELEMENT DETAIL INSPECTOR MODAL ================= -->
+    <div id="element-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-200" id="modal-card">
+            
+            <!-- Modal Header Header Banner -->
+            <div id="modal-header" class="p-6 text-white relative flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div id="modal-symbol-box" class="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex flex-col items-center justify-center font-black border border-white/30 shadow-inner">
+                        <span id="modal-number" class="text-xs opacity-80">1</span>
+                        <span id="modal-symbol" class="text-2xl">H</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <h2 id="modal-name" class="text-2xl font-extrabold">Hydrogen</h2>
+                            <button onclick="speakElementName()" class="p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors text-sm" title="Listen Pronunciation">
+                                🔊
+                            </button>
+                        </div>
+                        <span id="modal-category" class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20 mt-1">Reactive Nonmetal</span>
+                    </div>
+                </div>
+                
+                <button onclick="closeModal()" class="w-10 h-10 rounded-2xl bg-black/20 hover:bg-black/40 text-white flex items-center justify-center font-bold text-lg transition-colors">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Content Body -->
+            <div class="p-6 overflow-y-auto space-y-6 text-slate-700 dark:text-slate-200">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                    
+                    <!-- Bohr Atom Interactive Canvas -->
+                    <div class="bg-slate-50 dark:bg-slate-900/80 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 flex flex-col items-center">
+                        <span class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Animated Bohr Atom Model</span>
+                        <canvas id="bohr-canvas" width="200" height="200" class="w-48 h-48"></canvas>
+                        <span id="modal-electron-config" class="text-xs font-semibold text-slate-500 mt-2">Electrons: 1</span>
+                    </div>
+
+                    <!-- Quick Properties Grid -->
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-sm">
+                            <span class="text-slate-500 dark:text-slate-400 font-semibold">Atomic Mass:</span>
+                            <span id="modal-mass" class="font-extrabold">1.008 u</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-sm">
+                            <span class="text-slate-500 dark:text-slate-400 font-semibold">State at Room Temp:</span>
+                            <span id="modal-state" class="font-extrabold flex items-center gap-1">💨 Gas</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-sm">
+                            <span class="text-slate-500 dark:text-slate-400 font-semibold">Protons / Electrons:</span>
+                            <span id="modal-protons" class="font-extrabold">1</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-xl bg-slate-100 dark:bg-slate-700/50 text-sm">
+                            <span class="text-slate-500 dark:text-slate-400 font-semibold">Neutrons:</span>
+                            <span id="modal-neutrons" class="font-extrabold">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kid Friendly Description & Everyday Uses -->
+                <div class="space-y-4">
+                    <div class="bg-blue-50 dark:bg-blue-950/40 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/50">
+                        <h4 class="font-extrabold text-blue-800 dark:text-blue-300 text-sm flex items-center gap-2 mb-1">
+                            🌟 What is this element?
+                        </h4>
+                        <p id="modal-description" class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                            Hydrogen is the lightest and most common element in the entire universe! It fuels stars like our Sun.
+                        </p>
+                    </div>
+
+                    <div class="bg-amber-50 dark:bg-amber-950/40 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/50">
+                        <h4 class="font-extrabold text-amber-800 dark:text-amber-300 text-sm flex items-center gap-2 mb-1">
+                            🎈 Where do we see it in real life?
+                        </h4>
+                        <p id="modal-uses" class="text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                            It combines with oxygen to make water (H₂O) and powers rocket fuel!
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal Footer Action Button -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+                <button id="modal-add-beaker-btn" onclick="addCurrentModalToBeaker()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold text-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2 shadow-md shadow-indigo-500/20">
+                    🧪 Add to Reaction Lab
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================= Core Data: 118 Elements Dataset ================= */
+        const ELEMENTS_DATA = [
+            { num: 1, symbol: 'H', name: 'Hydrogen', mass: '1.008', category: 'reactive-nonmetal', col: 1, row: 1, state: 'gas', electrons: [1], desc: 'The lightest element! It makes up about 75% of all matter in the universe.', uses: 'Water (H₂O), rocket fuel, and clean energy cars.' },
+            { num: 2, symbol: 'He', name: 'Helium', mass: '4.0026', category: 'noble', col: 18, row: 1, state: 'gas', electrons: [2], desc: 'Super light gas that never burns or reacts with other elements easily.', uses: 'Birthday balloons, deep-sea diving gas, and MRI cooling.' },
+            { num: 3, symbol: 'Li', name: 'Lithium', mass: '6.94', category: 'alkali', col: 1, row: 2, state: 'solid', electrons: [2, 1], desc: 'The lightest metal on Earth. It is soft enough to cut with a plastic knife!', uses: 'Rechargeable batteries in phones, laptops, and electric cars.' },
+            { num: 4, symbol: 'Be', name: 'Beryllium', mass: '9.0122', category: 'alkaline', col: 2, row: 2, state: 'solid', electrons: [2, 2], desc: 'A strong but lightweight metal that gemstones like emeralds are made from.', uses: 'NASA space telescopes, satellites, and supersonic jets.' },
+            { num: 5, symbol: 'B', name: 'Boron', mass: '10.81', category: 'metalloid', col: 13, row: 2, state: 'solid', electrons: [2, 3], desc: 'A tough metalloid that helps make glass super heat-resistant.', uses: 'Silly putty, Pyrex glass cookware, and plant nutrients.' },
+            { num: 6, symbol: 'C', name: 'Carbon', mass: '12.011', category: 'reactive-nonmetal', col: 14, row: 2, state: 'solid', electrons: [2, 4], desc: 'The basis for all known life on Earth! Charcoal and shiny diamonds are both carbon.', uses: 'Pencil lead (graphite), diamonds, coal, and living tissues.' },
+            { num: 7, symbol: 'N', name: 'Nitrogen', mass: '14.007', category: 'reactive-nonmetal', col: 15, row: 2, state: 'gas', electrons: [2, 5], desc: 'Makes up nearly 78% of the air we breathe every single day.', uses: 'Plant fertilizer, food packaging to keep chips crispy, liquid nitrogen ice cream.' },
+            { num: 8, symbol: 'O', name: 'Oxygen', mass: '15.999', category: 'reactive-nonmetal', col: 16, row: 2, state: 'gas', electrons: [2, 6], desc: 'Essential gas for human breathing and burning fires.', uses: 'Breathing gas, hospital oxygen tanks, water molecules.' },
+            { num: 9, symbol: 'F', name: 'Fluorine', mass: '18.998', category: 'halogen', col: 17, row: 2, state: 'gas', electrons: [2, 7], desc: 'The most chemically reactive gas! Very dangerous in pure form.', uses: 'Toothpaste (fluoride) to prevent cavities and Teflon non-stick pans.' },
+            { num: 10, symbol: 'Ne', name: 'Neon', mass: '20.180', category: 'noble', col: 18, row: 2, state: 'gas', electrons: [2, 8], desc: 'Glows a bright reddish-orange color when electricity runs through it!', uses: 'Bright glowing city store signs and high-voltage indicators.' },
+            { num: 11, symbol: 'Na', name: 'Sodium', mass: '22.990', category: 'alkali', col: 1, row: 3, state: 'solid', electrons: [2, 8, 1], desc: 'Soft metal that explodes violently if dropped in water!', uses: 'Table salt (NaCl), baking soda, and street lamps.' },
+            { num: 12, symbol: 'Mg', name: 'Magnesium', mass: '24.305', category: 'alkaline', col: 2, row: 3, state: 'solid', electrons: [2, 8, 2], desc: 'Burns with a blinding white light! Crucial for green plants.', uses: 'Fireworks, flare sparks, racing bikes, and human muscle health.' },
+            { num: 13, symbol: 'Al', name: 'Aluminum', mass: '26.982', category: 'post-transition', col: 13, row: 3, state: 'solid', electrons: [2, 8, 3], desc: 'Lightweight, strong, and does not rust easily.', uses: 'Soda cans, aluminum foil wrap, airplane wings, and bike frames.' },
+            { num: 14, symbol: 'Si', name: 'Silicon', mass: '28.085', category: 'metalloid', col: 14, row: 3, state: 'solid', electrons: [2, 8, 4], desc: 'The second most common element in Earth’s crust. Makes sand!', uses: 'Computer chips, solar panels, glass, and beach sand.' },
+            { num: 15, symbol: 'P', name: 'Phosphorus', mass: '30.974', category: 'reactive-nonmetal', col: 15, row: 3, state: 'solid', electrons: [2, 8, 5], desc: 'Glows in the dark! Vital for human DNA and bones.', uses: 'Matchstick heads, fireworks, and garden fertilizers.' },
+            { num: 16, symbol: 'S', name: 'Sulfur', mass: '32.06', category: 'reactive-nonmetal', col: 16, row: 3, state: 'solid', electrons: [2, 8, 6], desc: 'Bright yellow crystal solid known for smelling like rotten eggs!', uses: 'Gunpowder, rubber tires, matches, and volcano gases.' },
+            { num: 17, symbol: 'Cl', name: 'Chlorine', mass: '35.45', category: 'halogen', col: 17, row: 3, state: 'gas', electrons: [2, 8, 7], desc: 'Yellowish green gas with a strong smell.', uses: 'Swimming pool disinfectant, tap water purification, bleach.' },
+            { num: 18, symbol: 'Ar', name: 'Argon', mass: '39.948', category: 'noble', col: 18, row: 3, state: 'gas', electrons: [2, 8, 8], desc: 'Colorless, odorless gas that does not react with anything.', uses: 'Filling double-pane glass windows and inside traditional lightbulbs.' },
+            { num: 19, symbol: 'K', name: 'Potassium', mass: '39.098', category: 'alkali', col: 1, row: 4, state: 'solid', electrons: [2, 8, 8, 1], desc: 'Soft silver metal. Essential electrolyte for human hearts!', uses: 'Bananas, plant fertilizer, soap making, and nervous system health.' },
+            { num: 20, symbol: 'Ca', name: 'Calcium', mass: '40.078', category: 'alkaline', col: 2, row: 4, state: 'solid', electrons: [2, 8, 8, 2], desc: 'The mineral that keeps your bones and teeth super strong!', uses: 'Milk, cheese, chalk, seashells, and concrete construction.' },
+            { num: 21, symbol: 'Sc', name: 'Scandium', mass: '44.956', category: 'transition', col: 3, row: 4, state: 'solid', electrons: [2, 8, 9, 2], desc: 'Rare lightweight transition metal.', uses: 'Baseball bats and high-end bicycle frames.' },
+            { num: 22, symbol: 'Ti', name: 'Titanium', mass: '47.867', category: 'transition', col: 4, row: 4, state: 'solid', electrons: [2, 8, 10, 2], desc: 'As strong as steel but 45% lighter! Never rusts in ocean water.', uses: 'Prosthetic medical joints, jet engines, spacecraft, and sunscreen.' },
+            { num: 23, symbol: 'V', name: 'Vanadium', mass: '50.942', category: 'transition', col: 5, row: 4, state: 'solid', electrons: [2, 8, 11, 2], desc: 'Hard metal mixed with steel to make super tough tools.', uses: 'Wrenches, drill bits, and jet engine parts.' },
+            { num: 24, symbol: 'Cr', name: 'Chromium', mass: '51.996', category: 'transition', col: 6, row: 4, state: 'solid', electrons: [2, 8, 13, 1], desc: 'Shiny silver mirror metal that prevents rust.', uses: 'Shiny car bumpers, stainless steel cutlery, and rubies.' },
+            { num: 25, symbol: 'Mn', name: 'Manganese', mass: '54.938', category: 'transition', col: 7, row: 4, state: 'solid', electrons: [2, 8, 13, 2], desc: 'Essential metal used to make tough steel for train tracks.', uses: 'Batteries, soda cans, and railway tracks.' },
+            { num: 26, symbol: 'Fe', name: 'Iron', mass: '55.845', category: 'transition', col: 8, row: 4, state: 'solid', electrons: [2, 8, 14, 2], desc: 'The most used metal on Earth! Gives blood its red color.', uses: 'Bridges, steel skyscrapers, red blood cells (hemoglobin), magnets.' },
+            { num: 27, symbol: 'Co', name: 'Cobalt', mass: '58.933', category: 'transition', col: 9, row: 4, state: 'solid', electrons: [2, 8, 15, 2], desc: 'Famous for creating brilliant deep blue glass and paints.', uses: 'EV batteries, cobalt blue paint, and heavy turbine blades.' },
+            { num: 28, symbol: 'Ni', name: 'Nickel', mass: '58.693', category: 'transition', col: 10, row: 4, state: 'solid', electrons: [2, 8, 16, 2], desc: 'Resists corrosion. Gives US 5-cent coins their name!', uses: 'Coins, rechargeable guitar strings, and stainless steel.' },
+            { num: 29, symbol: 'Cu', name: 'Copper', mass: '63.546', category: 'transition', col: 11, row: 4, state: 'solid', electrons: [2, 8, 18, 1], desc: 'Reddish metal that conducts electricity amazingly well.', uses: 'Electrical wires, plumbing pipes, and the Statue of Liberty!' },
+            { num: 30, symbol: 'Zn', name: 'Zinc', mass: '65.38', category: 'transition', col: 12, row: 4, state: 'solid', electrons: [2, 8, 18, 2], desc: 'Prevents iron from rusting through galvanization.', uses: 'Coating steel, US pennies, and sunblock lotion.' },
+            { num: 31, symbol: 'Ga', name: 'Gallium', mass: '69.723', category: 'post-transition', col: 13, row: 4, state: 'solid', electrons: [2, 8, 18, 3], desc: 'A metal that melts in your warm hand like butter!', uses: 'LED lights, lasers, and solar panels.' },
+            { num: 32, symbol: 'Ge', name: 'Germanium', mass: '72.630', category: 'metalloid', col: 14, row: 4, state: 'solid', electrons: [2, 8, 18, 4], desc: 'Important semiconductor for electronics.', uses: 'Night-vision goggles, fiber optics, and wide camera lenses.' },
+            { num: 33, symbol: 'As', name: 'Arsenic', mass: '74.922', category: 'metalloid', col: 15, row: 4, state: 'solid', electrons: [2, 8, 18, 5], desc: 'Historically famous toxic element.', uses: 'Special computer chips and wood preservatives.' },
+            { num: 34, symbol: 'Se', name: 'Selenium', mass: '78.971', category: 'reactive-nonmetal', col: 16, row: 4, state: 'solid', electrons: [2, 8, 18, 6], desc: 'Conducts electricity better when light shines on it!', uses: 'Copy machines, solar cells, and anti-dandruff shampoo.' },
+            { num: 35, symbol: 'Br', name: 'Bromine', mass: '79.904', category: 'halogen', col: 17, row: 4, state: 'liquid', electrons: [2, 8, 18, 7], desc: 'One of only two liquid elements at room temperature! Smells bad.', uses: 'Flame retardant materials and hot tub water treatments.' },
+            { num: 36, symbol: 'Kr', name: 'Krypton', mass: '83.798', category: 'noble', col: 18, row: 4, state: 'gas', electrons: [2, 8, 18, 8], desc: 'Glowing noble gas (not Superman’s kryptonite!).', uses: 'Airport runway flash lights and high-speed photo flash.' },
+            { num: 37, symbol: 'Rb', name: 'Rubidium', mass: '85.468', category: 'alkali', col: 1, row: 5, state: 'solid', electrons: [2, 8, 18, 8, 1], desc: 'Super reactive metal that catches fire in air.', uses: 'Atomic clocks and night-vision devices.' },
+            { num: 38, symbol: 'Sr', name: 'Strontium', mass: '87.62', category: 'alkaline', col: 2, row: 5, state: 'solid', electrons: [2, 8, 18, 8, 2], desc: 'Burns with a brilliant bright red flame!', uses: 'Red emergency flares and fireworks.' },
+            { num: 39, symbol: 'Y', name: 'Yttrium', mass: '88.906', category: 'transition', col: 3, row: 5, state: 'solid', electrons: [2, 8, 18, 9, 2], desc: 'Named after Ytterby, a small village in Sweden.', uses: 'Superconductors, LED TVs, and camera lenses.' },
+            { num: 40, symbol: 'Zr', name: 'Zirconium', mass: '91.224', category: 'transition', col: 4, row: 5, state: 'solid', electrons: [2, 8, 18, 10, 2], desc: 'Creates fake diamond gems called Cubic Zirconia.', uses: 'Fake diamonds, nuclear reactors, and space shuttle tiles.' },
+            { num: 47, symbol: 'Ag', name: 'Silver', mass: '107.87', category: 'transition', col: 11, row: 5, state: 'solid', electrons: [2, 8, 18, 18, 1], desc: 'Best electrical conductor of all metals!', uses: 'Jewelry, shiny mirrors, coins, and solar panels.' },
+            { num: 50, symbol: 'Sn', name: 'Tin', mass: '118.71', category: 'post-transition', col: 14, row: 5, state: 'solid', electrons: [2, 8, 18, 18, 4], desc: 'Soft metal that makes a funny sound called "tin cry" when bent.', uses: 'Food cans, soldering circuits, and bronze alloys.' },
+            { num: 53, symbol: 'I', name: 'Iodine', mass: '126.90', category: 'halogen', col: 17, row: 5, state: 'solid', electrons: [2, 8, 18, 18, 7], desc: 'Dark purple crystals that turn directly into purple gas!', uses: 'Antiseptic wound cleaner and thyroid hormone health.' },
+            { num: 54, symbol: 'Xe', name: 'Xenon', mass: '131.29', category: 'noble', col: 18, row: 5, state: 'gas', electrons: [2, 8, 18, 18, 8], desc: 'Heavy noble gas that glows ice blue in electric tubes.', uses: 'Ion engines in space probes and car headlights.' },
+            { num: 79, symbol: 'Au', name: 'Gold', mass: '196.97', category: 'transition', col: 11, row: 6, state: 'solid', electrons: [2, 8, 18, 32, 18, 1], desc: 'Precious yellow metal that never tarnishes or rusts.', uses: 'Treasure coins, fine jewelry, and astronaut visor coatings.' },
+            { num: 80, symbol: 'Hg', name: 'Mercury', mass: '200.59', category: 'transition', col: 12, row: 6, state: 'liquid', electrons: [2, 8, 18, 32, 18, 2], desc: 'Known as Quicksilver! The only metal liquid at room temperature.', uses: 'Old thermometers, barometers, and dental fillings.' },
+            { num: 82, symbol: 'Pb', name: 'Lead', mass: '207.2', category: 'post-transition', col: 14, row: 6, state: 'solid', electrons: [2, 8, 18, 32, 18, 4], desc: 'Very heavy, soft metal that blocks X-rays.', uses: 'X-ray protection aprons and car batteries.' },
+            { num: 92, symbol: 'U', name: 'Uranium', mass: '238.03', category: 'actinide', col: 3, row: 9, state: 'solid', electrons: [2, 8, 18, 32, 21, 9, 2], desc: 'Very dense radioactive element used for nuclear power.', uses: 'Nuclear power plants and submarine fuel.' }
+        ];
+
+        /* Generate filler fallback items for remaining 118 elements to ensure complete periodic table */
+        (function fillRemainingElements() {
+            const existingNums = new Set(ELEMENTS_DATA.map(e => e.num));
+            
+            // Grid coordinates map for standard layout
+            const gridPositions = {
+                // Row 5 extra
+                41:{c:5,r:5}, 42:{c:6,r:5}, 43:{c:7,r:5}, 44:{c:8,r:5}, 45:{c:9,r:5}, 46:{c:10,r:5}, 48:{c:12,r:5}, 49:{c:13,r:5}, 51:{c:15,r:5}, 52:{c:16,r:5},
+                // Row 6
+                55:{c:1,r:6}, 56:{c:2,r:6}, 57:{c:3,r:8}, 58:{c:4,r:8}, 59:{c:5,r:8}, 60:{c:6,r:8}, 61:{c:7,r:8}, 62:{c:8,r:8}, 63:{c:9,r:8}, 64:{c:10,r:8},
+                65:{c:11,r:8}, 66:{c:12,r:8}, 67:{c:13,r:8}, 68:{c:14,r:8}, 69:{c:15,r:8}, 70:{c:16,r:8}, 71:{c:17,r:8},
+                72:{c:4,r:6}, 73:{c:5,r:6}, 74:{c:6,r:6}, 75:{c:7,r:6}, 76:{c:8,r:6}, 77:{c:9,r:6}, 78:{c:10,r:6}, 81:{c:13,r:6}, 83:{c:15,r:6}, 84:{c:16,r:6}, 85:{c:17,r:6}, 86:{c:18,r:6},
+                // Row 7
+                87:{c:1,r:7}, 88:{c:2,r:7}, 89:{c:3,r:9}, 90:{c:4,r:9}, 91:{c:5,r:9}, 93:{c:7,r:9}, 94:{c:8,r:9}, 95:{c:9,r:9}, 96:{c:10,r:9}, 97:{c:11,r:9},
+                98:{c:12,r:9}, 99:{c:13,r:9}, 100:{c:14,r:9}, 101:{c:15,r:9}, 102:{c:16,r:9}, 103:{c:17,r:9},
+                104:{c:4,r:7}, 105:{c:5,r:7}, 106:{c:6,r:7}, 107:{c:7,r:7}, 108:{c:8,r:7}, 109:{c:9,r:7}, 110:{c:10,r:7}, 111:{c:11,r:7}, 112:{c:12,r:7}, 113:{c:13,r:7}, 114:{c:14,r:7}, 115:{c:15,r:7}, 116:{c:16,r:7}, 117:{c:17,r:7}, 118:{c:18,r:7}
+            };
+
+            const defaultNames = {
+                41: ['Nb', 'Niobium'], 42: ['Mo', 'Molybdenum'], 44: ['Ru', 'Ruthenium'], 45: ['Rh', 'Rhodium'], 46: ['Pd', 'Palladium'],
+                55: ['Cs', 'Cesium'], 56: ['Ba', 'Barium'], 57: ['La', 'Lanthanum'], 58: ['Ce', 'Cerium'], 74: ['W', 'Tungsten'],
+                78: ['Pt', 'Platinum'], 86: ['Rn', 'Radon'], 88: ['Ra', 'Radium'], 94: ['Pu', 'Plutonium'], 118: ['Og', 'Oganesson']
+            };
+
+            for (let i = 1; i <= 118; i++) {
+                if (!existingNums.has(i)) {
+                    const pos = gridPositions[i] || { c: (i % 18) || 18, r: Math.ceil(i / 18) };
+                    const nameInfo = defaultNames[i] || [`E${i}`, `Element ${i}`];
+                    
+                    let cat = 'transition';
+                    if (pos.r === 8) cat = 'lanthanide';
+                    if (pos.r === 9) cat = 'actinide';
+                    if (i === 118) cat = 'noble';
+
+                    ELEMENTS_DATA.push({
+                        num: i,
+                        symbol: nameInfo[0],
+                        name: nameInfo[1],
+                        mass: (i * 2.3).toFixed(1),
+                        category: cat,
+                        col: pos.c,
+                        row: pos.r,
+                        state: i > 92 ? 'solid' : (i % 3 === 0 ? 'gas' : 'solid'),
+                        electrons: [2, 8, Math.min(i - 10, 18)],
+                        desc: `${nameInfo[1]} is chemical element #${i}. It is studied by scientists in physics & chemistry labs!`,
+                        uses: 'Scientific research, high-tech manufacturing, and chemistry experiments.'
+                    });
+                }
+            }
+        })();
+
+        /* Sort elements by atomic number */
+        ELEMENTS_DATA.sort((a, b) => a.num - b.num);
+
+        /* ================= Molecule Combination Recipes ================= */
+        const RECIPES = [
+            {
+                id: 'water',
+                name: 'Water',
+                formula: 'H₂O',
+                icon: '💧',
+                desc: 'Life’s ultimate drink! Essential for all living things.',
+                req: { 1: 2, 8: 1 } // 2 H + 1 O
+            },
+            {
+                id: 'salt',
+                name: 'Table Salt',
+                formula: 'NaCl',
+                icon: '🧂',
+                desc: 'Delicious crystal condiment used to flavor french fries!',
+                req: { 11: 1, 17: 1 } // 1 Na + 1 Cl
+            },
+            {
+                id: 'co2',
+                name: 'Carbon Dioxide',
+                formula: 'CO₂',
+                icon: '🫧',
+                desc: 'Fizzy bubbles in soda pop and what humans exhale!',
+                req: { 6: 1, 8: 2 } // 1 C + 2 O
+            },
+            {
+                id: 'methane',
+                name: 'Methane Gas',
+                formula: 'CH₄',
+                icon: '🔥',
+                desc: 'Natural gas fuel and cow burps!',
+                req: { 6: 1, 1: 4 } // 1 C + 4 H
+            },
+            {
+                id: 'rust',
+                name: 'Iron Rust',
+                formula: 'Fe₂O₃',
+                icon: '🧱',
+                desc: 'Reddish coating formed when iron reacts with oxygen.',
+                req: { 26: 2, 8: 3 } // 2 Fe + 3 O
+            },
+            {
+                id: 'quartz',
+                name: 'Sand / Quartz',
+                formula: 'SiO₂',
+                icon: '🏖️',
+                desc: 'Beach sand and crystal clear glass windows!',
+                req: { 14: 1, 8: 2 } // 1 Si + 2 O
+            },
+            {
+                id: 'ammonia',
+                name: 'Ammonia',
+                formula: 'NH₃',
+                icon: '🧹',
+                desc: 'Pungent smelling gas used in household cleaning sprays.',
+                req: { 7: 1, 1: 3 } // 1 N + 3 H
+            },
+            {
+                id: 'peroxide',
+                name: 'Hydrogen Peroxide',
+                formula: 'H₂O₂',
+                icon: '🩹',
+                desc: 'Bubbly wound cleaner that kills germs on scraped knees!',
+                req: { 1: 2, 8: 2 } // 2 H + 2 O
+            },
+            {
+                id: 'chalk',
+                name: 'Chalk / Limestone',
+                formula: 'CaCO₃',
+                icon: '🦴',
+                desc: 'Sidewalk chalk, eggshells, and ocean coral reefs!',
+                req: { 20: 1, 6: 1, 8: 3 } // 1 Ca + 1 C + 3 O
+            },
+            {
+                id: 'baking_soda',
+                name: 'Baking Soda',
+                formula: 'NaHCO₃',
+                icon: '🧁',
+                desc: 'Makes volcano science projects erupt and cookies rise!',
+                req: { 11: 1, 1: 1, 6: 1, 8: 3 } // 1 Na + 1 H + 1 C + 3 O
+            },
+            {
+                id: 'acid',
+                name: 'Stomach Acid',
+                formula: 'HCl',
+                icon: '🧪',
+                desc: 'Powerful stomach acid that helps digest food!',
+                req: { 1: 1, 17: 1 } // 1 H + 1 Cl
+            },
+            {
+                id: 'ozone',
+                name: 'Ozone Layer',
+                formula: 'O₃',
+                icon: '🛡️',
+                desc: 'Upper atmosphere gas shield protecting Earth from UV rays!',
+                req: { 8: 3 } // 3 O
+            },
+            {
+                id: 'steel',
+                name: 'Steel Alloy',
+                formula: 'Fe + C',
+                icon: '🏗️',
+                desc: 'Super strong metal used for skyscrapers and bridges!',
+                req: { 26: 1, 6: 1 } // 1 Fe + 1 C
+            },
+            {
+                id: 'fool_gold',
+                name: 'Fool’s Gold (Pyrite)',
+                formula: 'FeS₂',
+                icon: '✨',
+                desc: 'Shiny metallic crystal that tricks gold prospectors!',
+                req: { 26: 1, 16: 2 } // 1 Fe + 2 S
+            },
+            {
+                id: 'alum_foil',
+                name: 'Aluminum Oxide Shield',
+                formula: 'Al₂O₃',
+                icon: '🛡️',
+                desc: 'Protective clear coating that stops foil from corroding!',
+                req: { 13: 2, 8: 3 } // 2 Al + 3 O
+            }
+        ];
+
+        /* App State Variables */
+        let activeTab = 'table';
+        let soundEnabled = true;
+        let selectedElementForModal = null;
+        let beakerContents = {}; // { atomicNum: count }
+        let discoveredMolecules = new Set(JSON.parse(localStorage.getItem('discoveredMolecules') || '[]'));
+        let activeFilterState = 'all';
+        let bohrAnimationReqId = null;
+
+        /* ================= Web Audio Sound Synthesizer ================= */
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new AudioCtx();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, now);
+                    osc.frequency.exponentialRampToValueAtTime(800, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'pop') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(150, now + 0.08);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                    osc.start(now);
+                    osc.stop(now + 0.08);
+                } else if (type === 'success') {
+                    // Happy chord
+                    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+                        const o = audioCtx.createOscillator();
+                        const g = audioCtx.createGain();
+                        o.type = 'sine';
+                        o.frequency.value = freq;
+                        o.connect(g);
+                        g.connect(audioCtx.destination);
+                        const startTime = now + idx * 0.06;
+                        g.gain.setValueAtTime(0.15, startTime);
+                        g.gain.exponentialRampToValueAtTime(0.001, startTime + 0.3);
+                        o.start(startTime);
+                        o.stop(startTime + 0.3);
+                    });
+                } else if (type === 'puff') {
+                    // Noise synth fallback
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.linearRampToValueAtTime(40, now + 0.2);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.2);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            } catch (e) {
+                console.warn('Audio play failed:', e);
+            }
+        }
+
+        /* Speech Synthesis for Element Pronunciation */
+        function speakElementName() {
+            if (!selectedElementForModal) return;
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(selectedElementForModal.name);
+                utter.rate = 0.9;
+                utter.pitch = 1.1;
+                window.speechSynthesis.speak(utter);
+            }
+        }
+
+        /* ================= Render Periodic Table Grid ================= */
+        function renderPeriodicTable() {
+            const mainGrid = document.getElementById('pt-main-grid');
+            const fBlockGrid = document.getElementById('pt-f-block-grid');
+            
+            mainGrid.innerHTML = '';
+            fBlockGrid.innerHTML = '';
+
+            ELEMENTS_DATA.forEach(el => {
+                const tile = document.createElement('div');
+                
+                // Color classes map
+                const catBgMap = {
+                    'alkali': 'bg-rose-500 text-white dark:bg-rose-600',
+                    'alkaline': 'bg-amber-500 text-white dark:bg-amber-600',
+                    'transition': 'bg-amber-300 text-amber-950 dark:bg-amber-500/80 dark:text-slate-900',
+                    'post-transition': 'bg-sky-400 text-slate-950 dark:bg-sky-500/80 dark:text-slate-900',
+                    'metalloid': 'bg-emerald-400 text-slate-950 dark:bg-emerald-500/80 dark:text-slate-900',
+                    'reactive-nonmetal': 'bg-green-500 text-white dark:bg-green-600',
+                    'halogen': 'bg-blue-500 text-white dark:bg-blue-600',
+                    'noble': 'bg-purple-600 text-white dark:bg-purple-700',
+                    'lanthanide': 'bg-pink-400 text-slate-950 dark:bg-pink-500 dark:text-slate-900',
+                    'actinide': 'bg-fuchsia-500 text-white dark:bg-fuchsia-600'
+                };
+
+                const bgClass = catBgMap[el.category] || 'bg-slate-400 text-white';
+
+                tile.className = `element-tile p-1 rounded-xl cursor-pointer flex flex-col justify-between select-none shadow-xs text-center border border-black/10 dark:border-white/10 ${bgClass}`;
+                
+                // CSS Grid Placement
+                tile.style.gridColumn = el.col;
+                tile.style.gridRow = el.row <= 7 ? el.row : (el.row === 8 ? 1 : 2);
+
+                tile.innerHTML = `
+                    <div class="flex justify-between items-center text-[9px] font-black opacity-80 leading-none">
+                        <span>${el.num}</span>
+                        <span>${el.state === 'solid' ? '🧊' : el.state === 'liquid' ? '💧' : '💨'}</span>
+                    </div>
+                    <div class="text-sm sm:text-base font-black tracking-wider my-0.5 leading-none">${el.symbol}</div>
+                    <div class="text-[9px] font-semibold truncate opacity-90 leading-none">${el.name}</div>
+                `;
+
+                tile.onclick = () => {
+                    playSound('click');
+                    openElementModal(el);
+                };
+
+                tile.setAttribute('data-num', el.num);
+                tile.setAttribute('data-symbol', el.symbol.toLowerCase());
+                tile.setAttribute('data-name', el.name.toLowerCase());
+                tile.setAttribute('data-category', el.category);
+                tile.setAttribute('data-state', el.state);
+
+                if (el.row <= 7) {
+                    mainGrid.appendChild(tile);
+                } else {
+                    fBlockGrid.appendChild(tile);
+                }
+            });
+        }
+
+        /* Filter Elements Handler */
+        function handleFilterChange() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const catFilter = document.getElementById('category-filter').value;
+
+            document.querySelectorAll('.element-tile').forEach(tile => {
+                const name = tile.getAttribute('data-name');
+                const symbol = tile.getAttribute('data-symbol');
+                const num = tile.getAttribute('data-num');
+                const cat = tile.getAttribute('data-category');
+                const state = tile.getAttribute('data-state');
+
+                const matchesQuery = !query || name.includes(query) || symbol.includes(query) || num === query;
+                const matchesCat = catFilter === 'all' || cat === catFilter;
+                const matchesState = activeFilterState === 'all' || state === activeFilterState;
+
+                if (matchesQuery && matchesCat && matchesState) {
+                    tile.classList.remove('opacity-15', 'scale-90', 'pointer-events-none');
+                } else {
+                    tile.classList.add('opacity-15', 'scale-90', 'pointer-events-none');
+                }
+            });
+        }
+
+        function filterState(state) {
+            playSound('pop');
+            activeFilterState = state;
+            document.querySelectorAll('.state-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-white', 'dark:bg-slate-800', 'shadow-xs');
+                btn.classList.add('text-slate-600', 'dark:text-slate-400');
+            });
+            event.target.classList.add('active', 'bg-white', 'dark:bg-slate-800', 'shadow-xs');
+            event.target.classList.remove('text-slate-600', 'dark:text-slate-400');
+            handleFilterChange();
+        }
+
+        /* ================= Render Bohr Atom Model Animation ================= */
+        function drawBohrModel(element) {
+            const canvas = document.getElementById('bohr-canvas');
+            const ctx = canvas.getContext('2d');
+            let angle = 0;
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+
+                // Draw Central Nucleus
+                const isDark = document.documentElement.classList.contains('dark');
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+                ctx.fillStyle = isDark ? '#F59E0B' : '#EF4444';
+                ctx.fill();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(239, 68, 68, 0.5)';
+
+                // Nucleus Label
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = 'bold 11px Fredoka';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(`${element.symbol}`, centerX, centerY);
+                ctx.shadowBlur = 0;
+
+                // Shells & Electrons
+                const shells = element.electrons || [2, 8];
+                const maxRadius = 85;
+                const step = maxRadius / (shells.length + 1);
+
+                shells.forEach((electronCount, shellIdx) => {
+                    const radius = (shellIdx + 1) * step + 18;
+
+                    // Draw Orbit Ring
+                    ctx.beginPath();
+                    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+                    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    // Draw Electrons
+                    for (let i = 0; i < electronCount; i++) {
+                        const speed = (shellIdx + 1) * 0.015;
+                        const electronAngle = angle * (shellIdx % 2 === 0 ? 1 : -1) * speed + (i * (Math.PI * 2 / electronCount));
+                        const ex = centerX + radius * Math.cos(electronAngle);
+                        const ey = centerY + radius * Math.sin(electronAngle);
+
+                        ctx.beginPath();
+                        ctx.arc(ex, ey, 5, 0, Math.PI * 2);
+                        ctx.fillStyle = '#3B82F6';
+                        ctx.fill();
+                        ctx.strokeStyle = '#FFFFFF';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                });
+
+                angle += 1;
+                bohrAnimationReqId = requestAnimationFrame(animate);
+            }
+
+            if (bohrAnimationReqId) cancelAnimationFrame(bohrAnimationReqId);
+            animate();
+        }
+
+        /* ================= Modal Operations ================= */
+        function openElementModal(element) {
+            selectedElementForModal = element;
+            
+            document.getElementById('modal-number').innerText = element.num;
+            document.getElementById('modal-symbol').innerText = element.symbol;
+            document.getElementById('modal-name').innerText = element.name;
+            document.getElementById('modal-category').innerText = element.category.toUpperCase().replace('-', ' ');
+            document.getElementById('modal-mass').innerText = `${element.mass} u`;
+            document.getElementById('modal-state').innerText = `${element.state === 'solid' ? '🧊 Solid' : element.state === 'liquid' ? '💧 Liquid' : '💨 Gas'}`;
+            document.getElementById('modal-protons').innerText = `${element.num}`;
+            document.getElementById('modal-neutrons').innerText = `${Math.round(parseFloat(element.mass)) - element.num}`;
+            document.getElementById('modal-description').innerText = element.desc;
+            document.getElementById('modal-uses').innerText = element.uses;
+            document.getElementById('modal-electron-config').innerText = `Electrons: ${element.electrons.join(', ')}`;
+
+            // Banner color based on group
+            const header = document.getElementById('modal-header');
+            header.className = `p-6 text-white relative flex items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-700`;
+
+            // Draw Bohr Canvas
+            drawBohrModel(element);
+
+            // Show Modal with Animation
+            const modal = document.getElementById('element-modal');
+            const card = document.getElementById('modal-card');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                card.classList.remove('scale-95');
+                card.classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeModal() {
+            playSound('pop');
+            const modal = document.getElementById('element-modal');
+            const card = document.getElementById('modal-card');
+            modal.classList.add('opacity-0');
+            card.classList.remove('scale-100');
+            card.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                if (bohrAnimationReqId) cancelAnimationFrame(bohrAnimationReqId);
+            }, 200);
+        }
+
+        /* Add modal element directly to laboratory beaker */
+        function addCurrentModalToBeaker() {
+            if (selectedElementForModal) {
+                addElementToBeaker(selectedElementForModal.num);
+                closeModal();
+                switchTab('lab');
+            }
+        }
+
+        /* ================= TAB 2: CRAFTING REACTION LAB LOGIC ================= */
+        function renderLabInventory() {
+            const grid = document.getElementById('quick-elements-grid');
+            grid.innerHTML = '';
+
+            // Popular elements for quick mixing
+            const labNumList = [1, 6, 7, 8, 11, 13, 14, 16, 17, 20, 26, 29, 79];
+            
+            labNumList.forEach(num => {
+                const el = ELEMENTS_DATA.find(e => e.num === num);
+                if (!el) return;
+
+                const btn = document.createElement('button');
+                btn.className = 'p-2 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-blue-100 dark:hover:bg-blue-900/40 border border-slate-200 dark:border-slate-600 transition-all flex flex-col items-center justify-center hover:scale-105 active:scale-95';
+                btn.onclick = () => {
+                    playSound('pop');
+                    addElementToBeaker(el.num);
+                };
+
+                btn.innerHTML = `
+                    <span class="text-xs font-bold text-slate-400">${el.num}</span>
+                    <span class="text-lg font-extrabold text-blue-600 dark:text-blue-400">${el.symbol}</span>
+                    <span class="text-[10px] font-semibold text-slate-600 dark:text-slate-300 truncate w-full text-center">${el.name}</span>
+                `;
+
+                grid.appendChild(btn);
+            });
+        }
+
+        function addElementToBeaker(atomicNum) {
+            beakerContents[atomicNum] = (beakerContents[atomicNum] || 0) + 1;
+            renderBeakerContents();
+            createBeakerBubble();
+        }
+
+        function renderBeakerContents() {
+            const box = document.getElementById('beaker-elements');
+            const emptyText = document.getElementById('empty-beaker-text');
+            box.innerHTML = '';
+
+            const keys = Object.keys(beakerContents);
+            if (keys.length === 0) {
+                box.appendChild(emptyText);
+                return;
+            }
+
+            keys.forEach(numStr => {
+                const num = parseInt(numStr);
+                const count = beakerContents[num];
+                const el = ELEMENTS_DATA.find(e => e.num === num);
+                if (!el || count <= 0) return;
+
+                const tag = document.createElement('div');
+                tag.className = 'px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-extrabold text-xs shadow-md border border-blue-400 flex items-center gap-1.5 animate-bounce';
+                tag.style.animationDuration = '2s';
+
+                tag.innerHTML = `
+                    <span>${el.symbol}</span>
+                    <span class="bg-blue-500 text-white rounded-full text-[10px] w-4 h-4 flex items-center justify-center font-bold">${count}</span>
+                    <button onclick="removeElementFromBeaker(${num})" class="text-rose-500 font-bold ml-0.5 hover:text-rose-700">✕</button>
+                `;
+
+                box.appendChild(tag);
+            });
+        }
+
+        function removeElementFromBeaker(atomicNum) {
+            playSound('pop');
+            if (beakerContents[atomicNum]) {
+                beakerContents[atomicNum]--;
+                if (beakerContents[atomicNum] <= 0) {
+                    delete beakerContents[atomicNum];
+                }
+            }
+            renderBeakerContents();
+        }
+
+        function clearBeaker() {
+            playSound('pop');
+            beakerContents = {};
+            renderBeakerContents();
+        }
+
+        function createBeakerBubble() {
+            const bubblesBox = document.getElementById('bubbles-box');
+            for (let i = 0; i < 3; i++) {
+                const b = document.createElement('div');
+                b.className = 'bubble';
+                const size = Math.random() * 12 + 6;
+                b.style.width = `${size}px`;
+                b.style.height = `${size}px`;
+                b.style.left = `${Math.random() * 80 + 10}%`;
+                b.style.bottom = '0px';
+                b.style.animationDuration = `${Math.random() * 1.5 + 1.5}s`;
+                bubblesBox.appendChild(b);
+
+                setTimeout(() => b.remove(), 2500);
+            }
+        }
+
+        /* Reaction Logic */
+        function triggerReaction() {
+            const beakerContainer = document.getElementById('beaker-container');
+            beakerContainer.classList.add('reacting-beaker');
+
+            playSound('puff');
+            createBeakerBubble();
+
+            setTimeout(() => {
+                beakerContainer.classList.remove('reacting-beaker');
+                
+                // Check recipes match
+                const matchedRecipe = RECIPES.find(recipe => {
+                    const reqKeys = Object.keys(recipe.req);
+                    const beakerKeys = Object.keys(beakerContents);
+
+                    if (reqKeys.length !== beakerKeys.length) return false;
+
+                    return reqKeys.every(k => beakerContents[k] === recipe.req[k]);
+                });
+
+                if (matchedRecipe) {
+                    // Success Discovery!
+                    playSound('success');
+                    confetti({
+                        particleCount: 80,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
+
+                    discoveredMolecules.add(matchedRecipe.id);
+                    localStorage.setItem('discoveredMolecules', JSON.stringify(Array.from(discoveredMolecules)));
+                    updateJournalUI();
+
+                    // Show success modal alert box
+                    showCustomAlert(`🎉 Reaction Success!`, `You created <strong>${matchedRecipe.name} (${matchedRecipe.formula})</strong>!<br><br>${matchedRecipe.icon} <em>${matchedRecipe.desc}</em>`, true);
+                    clearBeaker();
+                } else {
+                    // Unknown mix smoke effect
+                    showCustomAlert(`💨 Puff... No Reaction!`, `That combination didn't form a known stable molecule today. Try another recipe like 2x H + 1x O!`, false);
+                }
+            }, 800);
+        }
+
+        /* Custom Notification Dialog Box (Replacing default alert) */
+        function showCustomAlert(title, messageHtml, isSuccess) {
+            const dialog = document.createElement('div');
+            dialog.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in';
+            dialog.innerHTML = `
+                <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl max-w-sm w-full text-center shadow-2xl border ${isSuccess ? 'border-emerald-400' : 'border-amber-400'} space-y-4 transform scale-100 transition-all">
+                    <div class="text-4xl">${isSuccess ? '✨' : '🧪'}</div>
+                    <h3 class="text-xl font-extrabold text-slate-800 dark:text-slate-100">${title}</h3>
+                    <div class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">${messageHtml}</div>
+                    <button onclick="this.closest('.fixed').remove()" class="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-extrabold shadow-md hover:scale-105 active:scale-95 transition-all text-sm">
+                        Keep Experimenting!
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+        }
+
+        /* ================= TAB 3: DISCOVERY JOURNAL LOGIC ================= */
+        function updateJournalUI() {
+            const grid = document.getElementById('journal-grid');
+            const progressText = document.getElementById('journal-progress-text');
+            const journalCountText = document.getElementById('journal-count');
+            
+            grid.innerHTML = '';
+            const total = RECIPES.length;
+            const count = discoveredMolecules.size;
+
+            progressText.innerText = `${count} / ${total} Unlocked`;
+            journalCountText.innerText = `${count}/${total}`;
+
+            RECIPES.forEach(rec => {
+                const isUnlocked = discoveredMolecules.has(rec.id);
+                const card = document.createElement('div');
+                card.className = `p-5 rounded-3xl border transition-all flex flex-col justify-between ${isUnlocked ? 'bg-white dark:bg-slate-800 border-indigo-200 dark:border-indigo-800 shadow-md' : 'bg-slate-100/70 dark:bg-slate-900/50 border-dashed border-slate-300 dark:border-slate-700 opacity-70'}`;
+
+                // Format ingredient hint
+                const hintText = Object.entries(rec.req).map(([num, qty]) => {
+                    const el = ELEMENTS_DATA.find(e => e.num === parseInt(num));
+                    return `${qty}x ${el ? el.symbol : 'Element ' + num}`;
+                }).join(' + ');
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between">
+                        <div class="text-3xl">${isUnlocked ? rec.icon : '🔒'}</div>
+                        <span class="text-xs font-bold px-2.5 py-1 rounded-full ${isUnlocked ? 'bg-indigo-100 dark:bg-indigo-900/60 text-indigo-600 dark:text-indigo-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}">
+                            ${isUnlocked ? rec.formula : 'Locked'}
+                        </span>
+                    </div>
+
+                    <div class="my-3">
+                        <h4 class="font-extrabold text-base text-slate-800 dark:text-slate-100">${isUnlocked ? rec.name : 'Unknown Compound'}</h4>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">${isUnlocked ? rec.desc : 'Recipe Hint: Mix ' + hintText}</p>
+                    </div>
+
+                    <div class="text-[11px] font-semibold text-indigo-500 dark:text-indigo-400 pt-2 border-t border-slate-100 dark:border-slate-700">
+                        Formula Recipe: ${hintText}
+                    </div>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        /* ================= App Navigation & Utilities ================= */
+        function switchTab(tabId) {
+            playSound('click');
+            activeTab = tabId;
+
+            ['table', 'lab', 'journal'].forEach(t => {
+                const view = document.getElementById(`view-${t}`);
+                const btn = document.getElementById(`tab-${t}-btn`);
+
+                if (t === tabId) {
+                    view.classList.remove('hidden');
+                    view.classList.add('flex');
+                    btn.className = 'px-4 py-2 rounded-xl transition-all shadow-sm bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 flex items-center gap-2';
+                } else {
+                    view.classList.add('hidden');
+                    view.classList.remove('flex');
+                    btn.className = 'px-4 py-2 rounded-xl transition-all text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2';
+                }
+            });
+        }
+
+        function toggleTheme() {
+            playSound('pop');
+            const html = document.documentElement;
+            const themeBtn = document.getElementById('theme-btn');
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                themeBtn.innerText = '🌙';
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                themeBtn.innerText = '☀️';
+            }
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('sound-btn').innerText = soundEnabled ? '🔊' : '🔇';
+        }
+
+        /* Initialize Application on DOM Ready */
+        window.addEventListener('DOMContentLoaded', () => {
+            renderPeriodicTable();
+            renderLabInventory();
+            renderBeakerContents();
+            updateJournalUI();
+        });
+    </script>
+</body>
+</html>
